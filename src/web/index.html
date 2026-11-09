@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SYNTIQ Compiler</title>
+  <style>
+    :root {
+      --ink: #14151A;
+      --panel: #1C1E26;
+      --panel-2: #23252E;
+      --line: #3A3D48;
+      --text: #F2F2EA;
+      --soft: #9A9CA8;
+      --lime: #C6F432;
+      --lime-ink: #1A2200;
+      --red: #FF5C6C;
+      --amber: #FFB547;
+      --rose: #F4A6C0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: var(--ink);
+      background-image: radial-gradient(rgba(242,242,234,0.07) 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+      color: var(--text);
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      line-height: 1.5;
+    }
+
+    /* ---------- header ---------- */
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 64px;
+      letter-spacing: 3px;
+      margin: 0;
+      line-height: 1;
+    }
+    h1 .tilde {
+      color: var(--lime);
+      display: inline-block;
+      transform: rotate(-8deg);
+      margin-right: 6px;
+    }
+    .tagline {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--soft);
+      margin: 6px 0 22px;
+    }
+
+    /* ---------- pipeline stickers ---------- */
+    .stages { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .stages span {
+      padding: 6px 14px;
+      border: 1.5px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--soft);
+      font-size: 13px;
+      font-weight: bold;
+      transition: transform .2s, background .2s, color .2s;
+    }
+    .stages .ok-pill  { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); transform: rotate(-2deg); }
+    .stages .bad-pill { background: var(--red);  color: #2A0006;        border-color: var(--red);  transform: rotate(2deg); }
+    .stages .active   { border-color: var(--lime); color: var(--lime); transform: scale(1.12); }
+
+    /* ---------- cards ---------- */
+    .card {
+      background: var(--panel);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 5px 5px 0 #000;
+      padding: 16px 20px;
+      margin: 22px 0;
+    }
+    .card h3 {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      margin: 0 0 12px;
+      display: inline-block;
+      background: var(--lime);
+      color: var(--lime-ink);
+      border-radius: 6px;
+      padding: 2px 12px;
+      transform: rotate(-1deg);
+    }
+
+    /* ---------- editor + sample picker ---------- */
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .toolbar label { color: var(--soft); font-size: 14px; }
+    select {
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    select:focus { outline: 2px solid var(--lime); }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      background: var(--ink);
+      color: var(--text);
+      caret-color: var(--lime);
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      resize: vertical;
+    }
+    textarea:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+
+    button {
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px 28px;
+      margin: 12px 0 0;
+      cursor: pointer;
+      color: var(--lime-ink);
+      background: var(--lime);
+      border: 2px solid var(--lime);
+      border-radius: 10px;
+      box-shadow: 4px 4px 0 #000;
+      transition: transform .1s, box-shadow .1s;
+    }
+    button:hover  { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; }
+    button:active { transform: translate(4px, 4px);  box-shadow: 0 0 0 #000; }
+
+    /* ---------- tables ---------- */
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+    th { background: var(--panel-2); color: var(--lime); border-bottom: 2px solid var(--lime); }
+    td.mono { font-family: Consolas, monospace; font-weight: bold; color: var(--lime); }
+    tr:hover td { background: rgba(198,244,50,0.07); }
+    tr.errrow td { background: rgba(255,92,108,0.18); }
+
+    /* ---------- token chips ---------- */
+    .chip {
+      display: inline-block;
+      padding: 1px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1.5px solid transparent;
+      white-space: nowrap;
+    }
+    .chip.keyword  { background: var(--lime);  color: var(--lime-ink); }
+    .chip.ident    { background: var(--panel-2); color: var(--text); border-color: var(--line); }
+    .chip.number   { background: var(--amber); color: #3A2300; }
+    .chip.string   { background: var(--rose);  color: #3D0F22; }
+    .chip.operator { background: var(--text);  color: var(--ink); }
+    .chip.punct    { background: transparent;  color: var(--soft); border-color: var(--line); }
+    .chip.error    { background: var(--red);   color: #2A0006; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+
+    /* ---------- messages ---------- */
+    .err  { color: var(--red); font-weight: bold; }
+    .ok   { color: var(--lime); font-weight: bold; }
+    .note { color: var(--soft); }
+    .warn { color: var(--amber); font-weight: bold; }
+
+    /* ---------- code blocks ---------- */
+    pre {
+      background: var(--ink);
+      color: var(--text);
+      border: 1.5px solid var(--line);
+      padding: 14px 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ---------- grammar drawer ---------- */
+    details {
+      background: var(--panel);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 5px 5px 0 #000;
+      padding: 12px 18px;
+      margin: 0 0 22px;
+    }
+    summary { cursor: pointer; font-weight: bold; font-family: Georgia, serif; font-size: 18px; color: var(--lime); }
+    details pre { margin-top: 12px; }
+
+    ::selection { background: var(--lime); color: var(--lime-ink); }
+
+    /* ---------- reveal animation for cards ---------- */
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .card.fresh { animation: rise .35s ease-out; }
+  </style>
+</head>
+<body>
+  <h1><span class="tilde">~</span>SYNTIQ</h1>
+  <p class="tagline">Where syntax meets intelligence</p>
+
+  <div class="stages">
+    <span id="pill1">1. Lexical</span>
+    <span id="pill2">2. Syntax</span>
+    <span id="pill3">3. Semantic</span>
+    <span id="pill4">4. Intermediate Code</span>
+    <span id="pill5">5. Output</span>
+  </div>
+
+  <details>
+    <summary>SYNTIQ grammar (context-free, EBNF)</summary>
+<pre>program      ::= blueprint
+blueprint    ::= "blueprint" IDENT "{" { method } "}"
+method       ::= { modifier } type ( IDENT | "start" ) "(" [ param { "," param } ] ")" block
+param        ::= type IDENT
+modifier     ::= "open" | "hidden" | "guarded" | "shared" | "locked"
+type         ::= "whole" | "bigwhole" | "smallwhole" | "tinywhole" | "decimal"
+               | "shortdecimal" | "letter" | "truth" | "text" | "empty"
+
+block        ::= "{" { statement } "}"
+statement    ::= declaration ";"
+               | assignment ";"
+               | "show" "(" expr ")" ";"
+               | ifStmt | whileStmt | forStmt
+               | "stop" ";" | "skip" ";" | "giveback" [ expr ] ";"
+               | block
+declaration  ::= type IDENT [ ":=" expr ]
+assignment   ::= IDENT ":=" expr
+ifStmt       ::= "check" "(" expr ")" block [ "otherwise" ( ifStmt | block ) ]
+whileStmt    ::= "repeat" "(" expr ")" block
+forStmt      ::= "cycle" "(" ( declaration | assignment ) ";" expr ";" assignment ")" block
+
+expr         ::= andExpr { "either" andExpr }
+andExpr      ::= equality { "both" equality }
+equality     ::= relational { ( "~=" | "~!" ) relational }
+relational   ::= additive { ( "~&gt;" | "~&lt;" ) additive }
+additive     ::= term { ( "~+" | "~-" ) term }
+term         ::= unary { ( "~*" | "~/" | "~%" ) unary }
+unary        ::= ( "negate" | "~-" ) unary | primary
+primary      ::= INTEGER | DECIMAL | STRING | CHAR | "valid" | "invalid" | "nil"
+               | IDENT | "(" expr ")"</pre>
+  </details>
+
+  <section class="card">
+    <h3>Source code</h3>
+    <div class="toolbar">
+      <label for="samples">Load a sample:</label>
+      <select id="samples" onchange="loadSample(this.value)"></select>
+    </div>
+    <textarea id="code" spellcheck="false"></textarea>
+    <br><button onclick="compile()">Compile ~&gt;</button>
+  </section>
+
+  <section class="card">
+    <h3>1. Lexical Analysis</h3>
+    <div id="lexSummary"></div>
+    <div id="lexErrors"></div>
+    <div id="lexLegend"></div>
+    <div id="lexTable"></div>
+  </section>
+
+  <section class="card">
+    <h3>2. Syntax Analysis</h3>
+    <div id="synSummary"></div>
+    <div id="synErrors"></div>
+    <pre id="synTree" style="display:none"></pre>
+  </section>
+
+  <section class="card">
+    <h3>3. Semantic Analysis</h3>
+    <div id="semSummary"></div>
+    <div id="semErrors"></div>
+    <div id="semWarnings"></div>
+    <div id="semTable"></div>
+  </section>
+
+  <section class="card">
+    <h3>4. Intermediate Code (three-address code)</h3>
+    <div id="genSummary"></div>
+    <pre id="genCode" style="display:none"></pre>
+  </section>
+
+  <section class="card">
+    <h3>5. Output</h3>
+    <div id="runSummary"></div>
+    <pre id="runOutput" style="display:none"></pre>
+  </section>
+
+  <script>
+    /* ================= sample programs ================= */
+    const SAMPLES = {
+      proposal: {
+        label: 'Proposal sample (all features)',
+        code: `## Comments start with two hash signs
+blueprint Main {
+    open shared empty start() {
+        whole score := 10;
+        score := score ~+ 5;
+        score := score ~- 2;
+        check (score ~> 10 both score ~< 20) {
+            show("Score is in range");
+        } otherwise {
+            show("Score is out of range");
+        }
+        cycle (whole i := 0; i ~< 5; i := i ~+ 1) {
+            check (i ~= 3) {
+                skip;
+            }
+            show(i);
+        }
+        repeat (score ~< 20) {
+            score := score ~+ 1;
+        }
+        stop;
+    }
+}`
+      },
+      hello: {
+        label: 'Hello, SYNTIQ',
+        code: `blueprint Hello {
+    open shared empty start() {
+        show("Hello, SYNTIQ");
+    }
+}`
+      },
+      loop: {
+        label: 'Multiplication table',
+        code: `blueprint Table {
+    open shared empty start() {
+        whole n := 7;
+        cycle (whole i := 1; i ~< 6; i := i ~+ 1) {
+            show(n ~* i);
+        }
+    }
+}`
+      },
+      lexerr: {
+        label: 'Error demo: lexical (illegal character)',
+        code: `blueprint Bad {
+    open shared empty start() {
+        whole x := 5 @ 3;
+        show(x);
+    }
+}`
+      },
+      synerr: {
+        label: 'Error demo: syntax (missing semicolon)',
+        code: `blueprint Bad {
+    open shared empty start() {
+        whole x := 5
+        show(x);
+    }
+}`
+      },
+      semerr: {
+        label: 'Error demo: semantic (undeclared variable)',
+        code: `blueprint Bad {
+    open shared empty start() {
+        whole x := 5;
+        y := x ~+ 1;
+        show(y);
+    }
+}`
+      }
+    };
+
+    function buildSampleMenu() {
+      const sel = document.getElementById('samples');
+      Object.keys(SAMPLES).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = SAMPLES[key].label;
+        sel.appendChild(opt);
+      });
+      loadSample('proposal');
+    }
+
+    function loadSample(key) {
+      document.getElementById('code').value = SAMPLES[key].code;
+    }
+
+    /* ================= helpers ================= */
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    /* Decide which colour chip a token gets.
+       If a colour looks wrong, adjust the rules below. */
+    function tokenClass(t) {
+      const type = String(t.type).toUpperCase();
+      const lex = String(t.lexeme);
+      if (type === 'ERROR') return 'error';
+      if (type.indexOf('IDENT') !== -1) return 'ident';
+      if (type.indexOf('STRING') !== -1 || type.indexOf('CHAR') !== -1) return 'string';
+      if (/^[0-9]/.test(lex) || type.indexOf('INT') !== -1 || type.indexOf('DECIMAL') !== -1 ||
+          type.indexOf('NUM') !== -1 || type.indexOf('FLOAT') !== -1) return 'number';
+      if (/^[{}();,]$/.test(lex)) return 'punct';
+      if (lex.charAt(0) === '~' || lex === ':=' || lex === 'both' || lex === 'either' || lex === 'negate') return 'operator';
+      if (/^[a-z]+$/.test(lex)) return 'keyword';
+      return 'punct';
+    }
+
+    function legendHtml() {
+      return '<div class="legend">' +
+        '<span class="chip keyword">keyword</span>' +
+        '<span class="chip ident">identifier</span>' +
+        '<span class="chip number">number</span>' +
+        '<span class="chip string">text / letter</span>' +
+        '<span class="chip operator">operator</span>' +
+        '<span class="chip punct">punctuation</span>' +
+        '<span class="chip error">error</span></div>';
+    }
+
+    /* ================= stage stickers (light up one by one) ================= */
+    let animating = false;
+    let pending = {};
+
+    function applyPill(id, state) {
+      const el = document.getElementById(id);
+      el.className = state === 'ok' ? 'ok-pill' : state === 'bad' ? 'bad-pill' : '';
+    }
+
+    function setPill(id, state) {
+      if (animating) { pending[id] = state; return; }
+      applyPill(id, state);
+    }
+
+    async function playPills() {
+      const ids = ['pill1', 'pill2', 'pill3', 'pill4', 'pill5'];
+      ids.forEach(id => applyPill(id, ''));
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        el.classList.add('active');
+        await sleep(300);
+        applyPill(id, pending[id] || '');
+      }
+    }
+
+    function freshCards() {
+      document.querySelectorAll('.card').forEach((c, i) => {
+        if (i === 0) return;
+        c.classList.remove('fresh');
+        void c.offsetWidth;
+        c.classList.add('fresh');
+      });
+    }
+
+    /* ================= error lists ================= */
+    function errorList(errs) {
+      if (errs.length === 0) return '';
+      let html = '<ul class="err">';
+      errs.forEach(e => {
+        html += '<li>Line ' + e.line + ', column ' + e.column + ': ' + esc(e.message) + '</li>';
+      });
+      return html + '</ul>';
+    }
+
+    /* ================= main ================= */
+    async function compile() {
+      let data;
+      try {
+        const res = await fetch('/compile', { method: 'POST', body: document.getElementById('code').value });
+        data = await res.json();
+      } catch (e) {
+        document.getElementById('lexSummary').innerHTML =
+          '<p class="err">Could not reach the compiler server. Is it running?</p>';
+        return;
+      }
+
+      pending = {};
+      animating = true;
+      showLexer(data.lexer);
+      showSyntax(data.syntax);
+      showSemantic(data.semantic);
+      showCodegen(data.codegen);
+      showExecution(data.execution);
+      animating = false;
+
+      freshCards();
+      await playPills();
+    }
+
+    function showLexer(lex) {
+      const tokens = lex.tokens.filter(t => t.type !== 'EOF');
+      const errs = lex.errors;
+
+      setPill('pill1', errs.length === 0 ? 'ok' : 'bad');
+
+      document.getElementById('lexSummary').innerHTML =
+        '<p>' + tokens.length + ' tokens found. ' +
+        (errs.length === 0
+          ? '<span class="ok">No lexical errors.</span>'
+          : '<span class="err">' + errs.length + ' lexical error(s).</span>') + '</p>';
+
+      document.getElementById('lexErrors').innerHTML = errorList(errs);
+      document.getElementById('lexLegend').innerHTML = legendHtml();
+
+      let html = '<table><tr><th>#</th><th>Line</th><th>Col</th><th>Token type</th><th>Lexeme</th></tr>';
+      tokens.forEach((t, i) => {
+        const cls = t.type === 'ERROR' ? ' class="errrow"' : '';
+        html += '<tr' + cls + '><td>' + (i + 1) + '</td><td>' + t.line + '</td><td>' + t.column +
+                '</td><td><span class="chip ' + tokenClass(t) + '">' + esc(t.type) + '</span></td>' +
+                '<td class="mono">' + esc(t.lexeme) + '</td></tr>';
+      });
+      html += '</table>';
+      document.getElementById('lexTable').innerHTML = html;
+    }
+
+    function showSyntax(syn) {
+      const tree = document.getElementById('synTree');
+
+      if (syn.skipped) {
+        setPill('pill2', '');
+        document.getElementById('synSummary').innerHTML = '<p class="note">' + esc(syn.message) + '</p>';
+        document.getElementById('synErrors').innerHTML = '';
+        tree.style.display = 'none';
+        return;
+      }
+
+      const errs = syn.errors;
+      setPill('pill2', errs.length === 0 ? 'ok' : 'bad');
+
+      document.getElementById('synSummary').innerHTML = errs.length === 0
+        ? '<p><span class="ok">No syntax errors.</span> Parse tree:</p>'
+        : '<p><span class="err">' + errs.length + ' syntax error(s).</span></p>';
+
+      document.getElementById('synErrors').innerHTML = errorList(errs);
+
+      if (errs.length === 0) {
+        tree.textContent = syn.tree;
+        tree.style.display = 'block';
+      } else {
+        tree.style.display = 'none';
+      }
+    }
+
+    function lineList(items, cls) {
+      if (items.length === 0) return '';
+      let html = '<ul class="' + cls + '">';
+      items.forEach(e => {
+        html += '<li>Line ' + e.line + ': ' + esc(e.message) + '</li>';
+      });
+      return html + '</ul>';
+    }
+
+    function showSemantic(sem) {
+      if (sem.skipped) {
+        setPill('pill3', '');
+        document.getElementById('semSummary').innerHTML = '<p class="note">' + esc(sem.message) + '</p>';
+        document.getElementById('semErrors').innerHTML = '';
+        document.getElementById('semWarnings').innerHTML = '';
+        document.getElementById('semTable').innerHTML = '';
+        return;
+      }
+
+      const errs = sem.errors;
+      const warns = sem.warnings;
+      setPill('pill3', errs.length === 0 ? 'ok' : 'bad');
+
+      let summary = errs.length === 0
+        ? '<span class="ok">No semantic errors.</span>'
+        : '<span class="err">' + errs.length + ' semantic error(s).</span>';
+      if (warns.length > 0) {
+        summary += ' <span class="warn">' + warns.length + ' warning(s).</span>';
+      }
+      document.getElementById('semSummary').innerHTML = '<p>' + summary + '</p>';
+      document.getElementById('semErrors').innerHTML = lineList(errs, 'err');
+      document.getElementById('semWarnings').innerHTML = lineList(warns, 'warn');
+
+      let html = '<p><b>Symbol table</b></p>';
+      if (sem.symbols.length === 0) {
+        html += '<p class="note">No variables were declared.</p>';
+      } else {
+        html += '<table><tr><th>Name</th><th>Type</th><th>Scope</th><th>Declared on line</th><th>Kind</th><th>Used?</th></tr>';
+        sem.symbols.forEach(s => {
+          html += '<tr><td class="mono">' + esc(s.name) + '</td><td>' + esc(s.type) + '</td><td>' +
+                  esc(s.scope) + '</td><td>' + s.line + '</td><td>' + (s.param ? 'parameter' : 'variable') +
+                  '</td><td>' + (s.used ? 'yes' : (s.param ? '-' : 'no')) + '</td></tr>';
+        });
+        html += '</table>';
+      }
+      document.getElementById('semTable').innerHTML = html;
+    }
+
+    function showCodegen(gen) {
+      const pre = document.getElementById('genCode');
+      if (gen.skipped) {
+        setPill('pill4', '');
+        document.getElementById('genSummary').innerHTML = '<p class="note">' + esc(gen.message) + '</p>';
+        pre.style.display = 'none';
+        return;
+      }
+      setPill('pill4', 'ok');
+      document.getElementById('genSummary').innerHTML =
+        '<p><span class="ok">Code generated.</span> ' + gen.lines.length + ' instructions:</p>';
+      pre.textContent = gen.lines.join('\n');
+      pre.style.display = 'block';
+    }
+
+    function showExecution(run) {
+      const pre = document.getElementById('runOutput');
+      if (run.skipped) {
+        setPill('pill5', '');
+        document.getElementById('runSummary').innerHTML = '<p class="note">' + esc(run.message) + '</p>';
+        pre.style.display = 'none';
+        return;
+      }
+      setPill('pill5', run.error ? 'bad' : 'ok');
+
+      let summary = run.error
+        ? '<span class="err">Runtime error: ' + esc(run.error) + '</span>'
+        : '<span class="ok">Program finished.</span>';
+      summary += ' <span class="note">(' + run.steps + ' instructions executed)</span>';
+      document.getElementById('runSummary').innerHTML = '<p>' + summary + '</p>';
+
+      pre.textContent = run.output.length === 0 ? '(the program printed nothing)' : run.output.join('\n');
+      pre.style.display = 'block';
+    }
+
+    buildSampleMenu();
+  </script>
+</body>
+</html>
