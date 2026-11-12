@@ -289,10 +289,83 @@ primary      ::= INTEGER | DECIMAL | STRING | CHAR | "valid" | "invalid" | "nil"
   </section>
 
   <section class="card">
+
+  <div class="output-heading">
     <h3>5. Output</h3>
-    <div id="runSummary"></div>
-    <pre id="runOutput" style="display:none"></pre>
-  </section>
+
+    <button
+      type="button"
+      id="grammarToggle"
+      class="grammar-toggle"
+      onclick="toggleGrammar()"
+      aria-expanded="false">
+      Grammar +
+    </button>
+  </div>
+
+  <div id="runSummary"></div>
+
+  <pre id="runOutput" style="display:none"></pre>
+
+  <div id="grammarPanel" class="grammar-panel" hidden>
+
+    <h4>SYNTIQ Grammar (Context-Free, EBNF)</h4>
+
+    <pre>program      ::= blueprint
+blueprint    ::= "blueprint" IDENT "{" { method } "}"
+
+method       ::= { modifier } type ( IDENT | "start" )
+                 "(" [ param { "," param } ] ")" block
+
+param        ::= type IDENT
+
+modifier     ::= "open" | "hidden" | "guarded" | "shared" | "locked"
+
+type         ::= "whole" | "bigwhole" | "smallwhole" | "tinywhole"
+               | "decimal" | "shortdecimal" | "letter"
+               | "truth" | "text" | "empty"
+
+block        ::= "{" { statement } "}"
+
+statement    ::= declaration ";"
+               | assignment ";"
+               | "show" "(" expr ")" ";"
+               | ifStmt | whileStmt | forStmt
+               | "stop" ";" | "skip" ";" | "giveback" [ expr ] ";"
+               | block
+
+declaration  ::= type IDENT [ ":=" expr ]
+assignment   ::= IDENT ":=" expr
+
+ifStmt       ::= "check" "(" expr ")" block
+                 [ "otherwise" ( ifStmt | block ) ]
+
+whileStmt    ::= "repeat" "(" expr ")" block
+
+forStmt      ::= "cycle" "(" ( declaration | assignment )
+                 ";" expr ";" assignment ")" block
+
+expr         ::= andExpr { "either" andExpr }
+andExpr      ::= equality { "both" equality }
+
+equality     ::= relational { ( "~=" | "~!" ) relational }
+relational   ::= additive { ( "~>" | "~<" ) additive }
+additive     ::= term { ( "~+" | "~-" ) term }
+term         ::= unary { ( "~*" | "~/" | "~%" ) unary }
+
+unary        ::= ( "negate" | "~-" ) unary | primary
+
+primary      ::= INTEGER | DECIMAL | STRING | CHAR
+               | "valid" | "invalid" | "nil"
+               | call | IDENT | "(" expr ")"
+
+call         ::= IDENT "(" [ arguments ] ")"
+
+arguments    ::= expr { "," expr }</pre>
+
+  </div>
+
+</section>
 
   <script>
     /* ================= sample programs ================= */
@@ -694,7 +767,21 @@ blueprint Main {
       pre.style.display = 'block';
     }
 
+    function toggleGrammar() {
+      const panel = document.getElementById('grammarPanel');
+      const button = document.getElementById('grammarToggle');
+
+      const isHidden = panel.hidden;
+
+      panel.hidden = !isHidden;
+
+      button.textContent = isHidden ? 'Grammar −' : 'Grammar +';
+
+      button.setAttribute('aria-expanded', String(isHidden));
+    }
+
     buildSampleMenu();
+
   </script>
 </body>
 </html>
