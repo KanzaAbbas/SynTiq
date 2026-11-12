@@ -44,7 +44,6 @@
     h1 .tilde {
       color: var(--lime);
       display: inline-block;
-      transform: rotate(-8deg);
       margin-right: 6px;
     }
     .tagline {
@@ -67,8 +66,8 @@
       font-weight: bold;
       transition: transform .2s, background .2s, color .2s;
     }
-    .stages .ok-pill  { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); transform: rotate(-2deg); }
-    .stages .bad-pill { background: var(--red);  color: #2A0006;        border-color: var(--red);  transform: rotate(2deg); }
+    .stages .ok-pill  { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }
+    .stages .bad-pill { background: var(--red);  color: #2A0006;        border-color: var(--red); }
     .stages .active   { border-color: var(--lime); color: var(--lime); transform: scale(1.12); }
 
     /* ---------- cards ---------- */
@@ -89,7 +88,6 @@
       color: var(--lime-ink);
       border-radius: 6px;
       padding: 2px 12px;
-      transform: rotate(-1deg);
     }
 
     /* ---------- editor + sample picker ---------- */
@@ -369,6 +367,73 @@ blueprint Main {
         whole x := 5;
         y := x ~+ 1;
         show(y);
+    }
+}`
+      },
+            factorial: {
+        label: 'Method call: factorial (recursion)',
+        code: `blueprint Math {
+    open whole factorial(whole n) {
+        check (n ~< 2) {
+            giveback 1;
+        }
+        giveback n ~* factorial(n ~- 1);
+    }
+    open shared empty start() {
+        show(factorial(5));
+    }
+}`
+      },
+      nested: {
+        label: 'Method call: nested calls',
+        code: `blueprint Nest {
+    open whole add(whole a, whole b) {
+        giveback a ~+ b;
+    }
+    open whole twice(whole x) {
+        giveback add(x, x);
+    }
+    open shared empty start() {
+        show(add(1, twice(add(2, 3))));
+    }
+}`
+      },
+      decimalcall: {
+        label: 'Method call: decimal results',
+        code: `blueprint Dec {
+    open decimal widen(whole n) {
+        giveback n;
+    }
+    open decimal scale(decimal x) {
+        giveback x ~* 2;
+    }
+    open shared empty start() {
+        show(widen(7));
+        show(scale(3));
+        show(scale(1.5));
+    }
+}`
+      },
+      calltypeerr: {
+        label: 'Error demo: semantic (wrong argument type)',
+        code: `blueprint Bad {
+    open whole twice(whole n) {
+        giveback n ~* 2;
+    }
+    open shared empty start() {
+        whole x := twice("hello");
+        show(x);
+    }
+}`
+      },
+      callcounterr: {
+        label: 'Error demo: semantic (wrong argument count)',
+        code: `blueprint Bad {
+    open whole add(whole a, whole b) {
+        giveback a ~+ b;
+    }
+    open shared empty start() {
+        show(add(1));
     }
 }`
       }
